@@ -20,8 +20,9 @@ var events = []Event{}
 func (e Event) Save() error {
 	query := `
 	INSERT INTO events(name, description , location, dateTime, user_id)
-	VALUES (?,?,?,?,?) // * sql injection safe way of inserting values into this query
+	VALUES (?,?,?,?,?) 
 	`
+	// * ? --> sql injection safe way of inserting values into this query
 
 	// This will store query in the memory, and then reuse it in a highly efficient way.
 	// Using this before exec could lead to better performance
@@ -62,11 +63,40 @@ SELECT * FROM events
 	// loop until there is no row left
 	for rows.Next() {
 		var event Event
-		err := rows.Scan(&event.ID, &event.Name, &event.Description, &event.DateTime, &event.Location, &event.UserID)
+		err := rows.Scan(
+			&event.ID,
+			&event.Name,
+			&event.Description,
+			&event.Location,
+			&event.DateTime,
+			&event.UserID,
+		)
+
 		if err != nil {
 			return nil, err
 		}
 		events = append(events, event)
 	}
 	return events, nil
+}
+
+func GetEventByID(id int64) (*Event, error) {
+	query := "SELECT * FROM events WHERE id = ?"
+
+	row := db.DB.QueryRow(query, id)
+
+	var event Event
+	err := row.Scan(
+		&event.ID,
+		&event.Name,
+		&event.Description,
+		&event.Location,
+		&event.DateTime,
+		&event.UserID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+	return &event, nil
 }

@@ -1,0 +1,33 @@
+package models
+
+import "events_service/db"
+
+type User struct {
+	ID       int64
+	Email    string `binding:"required"`
+	Password string `binding:"required"`
+}
+
+var user = User{}
+
+func (u User) Save() error {
+	query := `
+		INSERT INTO users(email, password)
+		VALUES (?,?) 
+	`
+	stmt, err := db.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	result, err := stmt.Exec(u.Email, u.Password)
+	if err != nil {
+		return err
+	}
+	userId, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	u.ID = userId
+	return err
+}

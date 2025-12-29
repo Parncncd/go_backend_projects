@@ -1,6 +1,10 @@
 package models
 
-import "events_service/db"
+import (
+	"errors"
+	"events_service/db"
+	"events_service/utils"
+)
 
 type User struct {
 	ID       int64
@@ -20,7 +24,11 @@ func (u User) Save() error {
 		return err
 	}
 	defer stmt.Close()
-	result, err := stmt.Exec(u.Email, u.Password)
+	hashedPassword, err := utils.HashPassword(u.Password)
+	if err != nil {
+		return err
+	}
+	result, err := stmt.Exec(u.Email, hashedPassword)
 	if err != nil {
 		return err
 	}
@@ -30,4 +38,24 @@ func (u User) Save() error {
 	}
 	u.ID = userId
 	return err
+}
+
+func (u User) ValidateCredentials() error {
+	query := "SELECT email, password FROM users WHERE email = ?"
+
+	row := db.DB.QueryRow(query, u.Email)
+
+	var retrievedPassword string
+	var retrievedEmail string
+	err := row.Scan(&retrievedEmail, &retrievedPassword)
+	if err != nil {
+		return errors.New("Credentials invalid")
+	}
+
+	passwordIsValid := utils.CheckPasswordHash(u.Password, retrievedPassword)
+
+	if !passwordIsValid {
+		return errors.New("Credentials invalid")
+	}
+	return nil
 }
